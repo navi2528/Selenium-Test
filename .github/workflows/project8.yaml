@@ -24,6 +24,11 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+           name: app-jar
+           path: target/*.jar
 
       # PHASE 3: Build Project
       - name: Build with Maven
@@ -36,3 +41,43 @@ jobs:
           -Dsonar.projectKey=Selenium-Test \
           -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
           -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+  build_docker_image_and_push:
+      runs-on: ubuntu-latest
+      needs: build-and-sonar
+      steps:
+      - uses: actions/checkout@v4
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: app 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+           username: ${{ secrets.DOCKERHUB_USERNAME }}
+           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set upDocker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+         push: true
+         tags: naveen/Selenium-Test:latest
+      
+
+
+
+
+
+
+
+        
+
+
+
+
+
+      
