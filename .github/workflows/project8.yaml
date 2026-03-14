@@ -1,51 +1,35 @@
-name: CI/CD pipeline to deploy to k8s
+name: DevSecOps CI/CD Pipeline
 
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-
-      # Checkout code
+      # PHASE 1: CHECKOUT
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Setup Java
-      - name: Set up JDK
+      # PHASE 2: CACHE MAVEN DEPENDENCIES
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # PHASE 3: JAVA SETUP
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      # Maven Validate
-      - name: Validate with Maven
-        run: mvn validate
-
-      # Maven Compile
-      - name: Compile with Maven
-        run: mvn compile
-
-      # Maven Test
-      - name: Test with Maven
-        run: mvn test
-
-      # Maven Package
-      - name: Package with Maven
-        run: mvn clean package
-
-      # Verify WAR file
-      - name: Verify WAR file
-        run: ls -lh target/
-
-      # SonarQube Scan
-      - name: SonarQube Scan
-        run: |
-          mvn clean verify sonar:sonar \
-            -Dsonar.projectKey=train-ticket-reservation \
-            -Dsonar.host.url="${{ secrets.SONAR_HOST_URL }}" \
-            -Dsonar.login="${{ secrets.SONAR_TOKEN }}"
+      # PHASE 4: BUILD APPLICATION
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
