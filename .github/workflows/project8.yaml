@@ -1,125 +1,38 @@
-name: DevSecOps CI/CD Pipeline
-
-on:
+name: ci/cd pipeline to deploy to k8s
+on: 
   push:
-    branches:
-      - main
-
+    branches: master
 jobs:
-  build-and-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
-
     steps:
-
-      # PHASE 1: CHECKOUT
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: checkout code
+        uses: actions/checkout@v3
+      
+      - name: set-up jdk
+        uses: actions/setup-java@v3
         with:
-          fetch-depth: 0
+          distribution: 'temurin'
+          java-version: '17'   # Updated Java version
+      
+      - name: validate with maven
+        run: mvn validate
 
-      # PHASE 2: CACHE MAVEN DEPENDENCIES
-      - name: Cache Maven dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+      - name: compile with maven
+        run: mvn compile
+      
+      - name: test with maven
+        run: mvn test
+      
+      - name: package with maven
+        run: mvn clean package
 
-      # PHASE 3: JAVA SETUP
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      # PHASE 4: BUILD APPLICATION
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-
-      # PHASE 5: SONARQUBE SCAN
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4.1.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-      # PHASE 6: DOCKER LOGIN
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # PHASE 7: BUILD AND PUSH IMAGE
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/selenium-test:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/selenium-test:latest
-
-      # PHASE 8: TRIVY SECURITY SCAN
-      - name: Scan Image using Trivy
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/selenium-test:latest
-          format: sarif
-          output: trivy-results.sarif
-
-      # PHASE 9: COPY FILES TO K8S MASTER
-      - name: Copy Kubernetes Files
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.MASTER_IP }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "k8s/*"
-          target: "/home/${{ secrets.SSH_USER }}/deploy_files"
-
-      # PHASE 10: DEPLOY APPLICATION
-      - name: Deploy Application
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.MASTER_IP }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            kubectl apply -f /home/${{ secrets.SSH_USER }}/deploy_files/k8s/deployment.yaml
-            kubectl apply -f /home/${{ secrets.SSH_USER }}/deploy_files/k8s/service.yaml
-            kubectl set image deployment/selenium-test selenium-test=${{ secrets.DOCKER_USERNAME }}/selenium-test:${{ github.sha }}
-            kubectl rollout status deployment/selenium-test
-
-      # PHASE 11: SUCCESS EMAIL
-      - name: Send Deployment Mail
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: Deployment Successful
-          body: |
-            Selenium-Test App deployed successfully.
-            Access: http://${{ secrets.MASTER_IP }}:30007
-          to: ${{ secrets.EMAIL_TO }}
-          from: GitHub Actions
-
-      # PHASE 12: FAILURE EMAIL
-      - name: Send Failure Mail
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: Deployment Failed
-          body: |
-            Selenium-Test App deployment failed.
-            Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          to: ${{ secrets.EMAIL_TO }}
-          from: GitHub Actions
+      - name: verify WAR file
+        run: ls -lh target/
+      
+      - name: Build, Test and SonarQube Scan
+        run: |
+          mvn clean verify sonar:sonar \
+            -Dsonar.projectKey=Selenium-Test \
+            -Dsonar.host.url="${{ secrets.SONAR_HOST_URL }}" \
+            -Dsonar.login="${{ secrets.SONAR_TOKEN }}"
