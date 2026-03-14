@@ -23,6 +23,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
+      - name: Build with Maven
+        run: mvn -B clean package -DskipTests
+
       # PHASE 3: JAVA SETUP
       - name: Setup Java
         uses: actions/setup-java@v4
