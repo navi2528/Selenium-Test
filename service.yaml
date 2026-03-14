@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+name: Selenium-Test
+spec:
+type: NodePort
+selector:
+app: Selenium-Test
+ports:
+- protocol: TCP
+port: 80 # Port inside the cluster
+targetPort: 8080 # Application port
+nodePort: 30007
