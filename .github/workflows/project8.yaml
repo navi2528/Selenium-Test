@@ -29,11 +29,8 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
         
-      - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v4
-        with:
-         name: app-jar
-         path: target/*.jar
+      - name: check WAR file
+        run: ls target
 
       # PHASE 4: SonarQube Scan
       - name: SonarQube Scan
