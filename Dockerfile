@@ -1,12 +1,10 @@
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 
 ENV APP_HOME=/usr/src/app
 
-RUN mkdir -p $APP_HOME
-
-COPY target/*.jar $APP_HOME/app.jar
-
 WORKDIR $APP_HOME
+
+COPY target/*.jar app.jar
 
 EXPOSE 8080
 
