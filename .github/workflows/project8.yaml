@@ -1,4 +1,4 @@
-name: ci/cd pipeline to deploy to k8s
+name: ci/cd pipeline 
 on: 
   push:
     branches: master
