@@ -56,14 +56,14 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:latest
+            ${{ secrets.DOCKER_USERNAME }}/Selenium-Test:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/Selenium-Test:latest
 
       # PHASE 8: TRIVY SECURITY SCAN
       - name: Scan Image using Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:latest
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/Selenium-Test:latest
           format: sarif
           output: trivy-results.sarif
 
@@ -87,7 +87,7 @@ jobs:
           script: |
             kubectl apply -f /home/${{ secrets.SSH_USER }}/deploy_files/k8s/deployment.yaml
             kubectl apply -f /home/${{ secrets.SSH_USER }}/deploy_files/k8s/service.yaml
-            kubectl set image deployment/train-ticket-app train-ticket-app=${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:${{ github.sha }} --record
+            kubectl set image deployment/Selenium-Test Selenium-Test-app=${{ secrets.DOCKER_USERNAME }}/Selenium-Test:${{ github.sha }} --record
             kubectl rollout status deployment/train-ticket-app
 
       # PHASE 11: EMAIL NOTIFICATION
@@ -117,7 +117,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: Deployment Failed
           body: |
-            Train Ticket Reservation App deployment failed.
+            Selenium-Test App deployment failed.
             Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions
