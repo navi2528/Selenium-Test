@@ -1,9 +1,13 @@
 FROM tomcat:9-jdk17
 
+# Remove default Tomcat applications
 RUN rm -rf /usr/local/tomcat/webapps/*
 
-COPY app/*.war /usr/local/tomcat/webapps/ROOT.war
+# Copy WAR file to Tomcat
+COPY target/*.war /usr/local/tomcat/webapps/ROOT.war
 
+# Expose Tomcat port
 EXPOSE 8080
 
-CMD ["catalina.sh","run"]]
+# Start Tomcat
+CMD ["catalina.sh", "run"]
