@@ -31,6 +31,8 @@ jobs:
         
       - name: Build project
         run: mvn package
+      - name: Check WAR file
+        run: ls target
       - name: upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
