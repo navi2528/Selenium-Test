@@ -24,11 +24,6 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-           name: app-jar
-           path: target/*.jar
 
       # PHASE 3: Build Project
       - name: Build with Maven
