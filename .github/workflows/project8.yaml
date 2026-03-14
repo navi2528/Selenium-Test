@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # --- PHASE 1: INITIALIZATION ---
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -21,14 +22,10 @@ jobs:
           cache: maven
 
       # --- PHASE 2: BUILD & CODE QUALITY ---
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-
       - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: mvn sonar:sonar
 
       # --- PHASE 3: DOCKER IMAGE ---
       - name: Login to Docker Hub
