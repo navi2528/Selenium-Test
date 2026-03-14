@@ -29,10 +29,13 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
         
-      - name: Prepare WAR for Docker
-        run: |
-          mkdir -p app
-          cp target/*.war app/app.war
+      - name: Build project
+        run: mvn package
+      - name: upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+         name: app-jar
+         path: target/*.jar
 
       # PHASE 4: SonarQube Scan
       - name: SonarQube Scan
@@ -63,7 +66,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
          push: true
-         tags: naveen/selenium-test:latest
+         tags: naveen/bankapp:latest
       
 
 
