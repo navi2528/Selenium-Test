@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+name: Selenium-Test
+spec:
+replicas: 2
+selector:
+matchLabels:
+app: Selenium-Test
+template:
+metadata:
+labels:
+app: Selenium-Test
+spec:
+containers:
+- name: Selenium-Test
+# Image is dynamically updated by the CI/CD pipeline
+image: naveensheelam/Selenium-Test:latest
+ports:
+- containerPort: 8080
+imagePullPolicy: Always
