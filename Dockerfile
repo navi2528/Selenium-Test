@@ -1,11 +1,13 @@
-FROM eclipse-temurin:17-jdk-alpine
+FROM openjdk:17-jdk-slim
 
-EXPOSE 8080
+ENV APP_HOME=/usr/src/app
 
-ENV APP_HOME /usr/src/app
+RUN mkdir -p $APP_HOME
 
-COPY app/*.jar $APP_HOME/app.jar
+COPY target/*.jar $APP_HOME/app.jar
 
 WORKDIR $APP_HOME
 
-CMD  ["java", "-jar", "app.jar"]
+EXPOSE 8080
+
+CMD ["java","-jar","app.jar"]
