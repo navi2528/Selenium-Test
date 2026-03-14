@@ -2,7 +2,8 @@ name: DevSecOps CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build-and-deploy:
@@ -10,34 +11,37 @@ jobs:
 
     steps:
 
-      # --- PHASE 1: INITIALIZATION ---
+      # PHASE 1: CHECKOUT
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      # PHASE 2: JAVA SETUP
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: 17
 
-      # --- PHASE 2: BUILD ---
+      # PHASE 3: BUILD APPLICATION
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      # --- PHASE 3: SONARQUBE SCAN ---
+      # PHASE 4: SONARQUBE SCAN
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v4.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_SCANNER_OPTS: "-Dsonar.scanner.skipJreProvisioning=true"
 
-      # --- PHASE 4: DOCKER IMAGE ---
-      - name: Login to Docker Hub
+      # PHASE 5: DOCKER LOGIN
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # PHASE 6: BUILD AND PUSH IMAGE
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -47,18 +51,18 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:${{ github.sha }}
             ${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:latest
 
-      # --- PHASE 5: SECURITY SCAN ---
-      - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@master
+      # PHASE 7: TRIVY SECURITY SCAN
+      - name: Scan Image using Trivy
+        uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: "${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:latest"
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:latest
           format: table
           severity: CRITICAL,HIGH
           exit-code: "0"
 
-      # --- PHASE 6: COPY FILES TO SERVER ---
-      - name: Copy K8s Manifests to Master Node
-        uses: appleboy/scp-action@master
+      # PHASE 8: COPY FILES TO K8S MASTER
+      - name: Copy Kubernetes Files
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.MASTER_IP }}
           username: ${{ secrets.SSH_USER }}
@@ -66,9 +70,9 @@ jobs:
           source: "k8s/*"
           target: "/home/${{ secrets.SSH_USER }}/deploy_files"
 
-      # --- PHASE 7: DEPLOY TO KUBERNETES ---
-      - name: Execute Deployment on Master Node
-        uses: appleboy/ssh-action@master
+      # PHASE 9: DEPLOY APPLICATION
+      - name: Deploy Application
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.MASTER_IP }}
           username: ${{ secrets.SSH_USER }}
@@ -79,8 +83,8 @@ jobs:
             kubectl set image deployment/train-ticket-app train-ticket-app=${{ secrets.DOCKER_USERNAME }}/train-ticket-reservation:${{ github.sha }}
             kubectl rollout status deployment/train-ticket-app
 
-      # --- PHASE 8: EMAIL NOTIFICATION ---
-      - name: Send Email Notification
+      # PHASE 10: EMAIL NOTIFICATION
+      - name: Send Deployment Mail
         if: success()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -88,9 +92,9 @@ jobs:
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: Deployment Successful - Build ${{ github.sha }}
+          subject: Deployment Successful
           body: |
-            Success! The train-ticket-reservation app has been deployed.
-            Access it here: http://${{ secrets.MASTER_IP }}:30007
+            Train Ticket Reservation App deployed successfully.
+            Access: http://${{ secrets.MASTER_IP }}:30007
           to: your-email@example.com
           from: GitHub Actions
