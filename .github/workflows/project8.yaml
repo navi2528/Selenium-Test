@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # PHASE 1: CHECKOUT
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -18,7 +19,7 @@ jobs:
 
       # PHASE 2: CACHE MAVEN DEPENDENCIES
       - name: Cache Maven dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -30,7 +31,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
 
       # PHASE 4: BUILD APPLICATION
       - name: Build with Maven
@@ -65,9 +66,8 @@ jobs:
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/selenium-test:latest
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: "0"
+          format: sarif
+          output: trivy-results.sarif
 
       # PHASE 9: COPY FILES TO K8S MASTER
       - name: Copy Kubernetes Files
@@ -104,7 +104,7 @@ jobs:
           subject: Deployment Successful
           body: |
             Selenium-Test App deployed successfully.
-            Access it here: http://${{ secrets.MASTER_IP }}:30007
+            Access: http://${{ secrets.MASTER_IP }}:30007
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions
 
@@ -119,8 +119,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: Deployment Failed
           body: |
-            Selenium-Test deployment failed.
-            Check logs:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Selenium-Test App deployment failed.
+            Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions
