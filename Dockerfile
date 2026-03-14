@@ -1,11 +1,9 @@
 FROM tomcat:9.0-jdk17-temurin-jammy
 
-ENV APP_HOME=/usr/src/app
+RUN rm -rf/usr/local/tomcat/webapps/*
 
-WORKDIR $APP_HOME
-
-COPY target/*.jar app.jar
+COPY target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
 
-CMD ["java","-jar","app.jar"]
+CMD ["catalina.sh"."run"]
