@@ -13,6 +13,8 @@ jobs:
       # PHASE 1: CHECKOUT
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # PHASE 2: CACHE MAVEN DEPENDENCIES
       - name: Cache Maven dependencies
@@ -36,11 +38,10 @@ jobs:
 
       # PHASE 5: SONARQUBE SCAN
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v2.1.0
+        uses: SonarSource/sonarqube-scan-action@v4.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          SONAR_SCANNER_OPTS: "-Dsonar.scanner.skipJreProvisioning=true"
 
       # PHASE 6: DOCKER LOGIN
       - name: Login to DockerHub
@@ -56,20 +57,21 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/Selenium-Test:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/Selenium-Test:latest
+            ${{ secrets.DOCKER_USERNAME }}/selenium-test:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/selenium-test:latest
 
       # PHASE 8: TRIVY SECURITY SCAN
       - name: Scan Image using Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/Selenium-Test:latest
-          format: sarif
-          output: trivy-results.sarif
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/selenium-test:latest
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "0"
 
       # PHASE 9: COPY FILES TO K8S MASTER
       - name: Copy Kubernetes Files
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.MASTER_IP }}
           username: ${{ secrets.SSH_USER }}
@@ -79,7 +81,7 @@ jobs:
 
       # PHASE 10: DEPLOY APPLICATION
       - name: Deploy Application
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.MASTER_IP }}
           username: ${{ secrets.SSH_USER }}
@@ -87,10 +89,10 @@ jobs:
           script: |
             kubectl apply -f /home/${{ secrets.SSH_USER }}/deploy_files/k8s/deployment.yaml
             kubectl apply -f /home/${{ secrets.SSH_USER }}/deploy_files/k8s/service.yaml
-            kubectl set image deployment/Selenium-Test Selenium-Test-app=${{ secrets.DOCKER_USERNAME }}/Selenium-Test:${{ github.sha }} --record
-            kubectl rollout status deployment/train-ticket-app
+            kubectl set image deployment/selenium-test selenium-test=${{ secrets.DOCKER_USERNAME }}/selenium-test:${{ github.sha }}
+            kubectl rollout status deployment/selenium-test
 
-      # PHASE 11: EMAIL NOTIFICATION
+      # PHASE 11: SUCCESS EMAIL
       - name: Send Deployment Mail
         if: success()
         uses: dawidd6/action-send-mail@v3
@@ -101,12 +103,12 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: Deployment Successful
           body: |
-            Train Ticket Reservation App deployed successfully.
-            Access: http://${{ secrets.MASTER_IP }}:30007
+            Selenium-Test App deployed successfully.
+            Access it here: http://${{ secrets.MASTER_IP }}:30007
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions
 
-      # PHASE 12: FAILURE NOTIFICATION (Optional)
+      # PHASE 12: FAILURE EMAIL
       - name: Send Failure Mail
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -117,7 +119,8 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: Deployment Failed
           body: |
-            Selenium-Test App deployment failed.
-            Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Selenium-Test deployment failed.
+            Check logs:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions
